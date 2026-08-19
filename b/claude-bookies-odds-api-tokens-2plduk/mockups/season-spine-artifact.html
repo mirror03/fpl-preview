@@ -1,0 +1,648 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Season Spine</title>
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────────────
+   Lifted from the live site so this reads as the product, not a sketch of
+   it: a cool near-black ground, aurum gold as the single accent, and the
+   fixture-difficulty ramp exactly as the app draws it. This page commits to
+   one world — it is a prototype of a dark application — so every colour is
+   painted explicitly and nothing is left to the host's theme. */
+:root{
+  --ground:#0a0b0d; --surface:#131519; --surface-2:#1b1e23; --raised:#23262c;
+  --ink:#eef0f4; --ink-2:#a8acb3; --ink-3:#7e838b;
+  --line:rgba(255,255,255,.11); --line-2:rgba(255,255,255,.2);
+  --gold:#c9a227; --gold-lit:#ead188; --gold-soft:rgba(201,162,39,.12);
+  --live:#3ddc7a; --alarm:#f0736f;
+  --d1:#2fbf6e; --d2:#7fd39b; --d3:#4c5766; --d4:#e8907f; --d5:#e05b52;
+  --tap:44px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--gold-lit);outline-offset:2px;border-radius:4px}
+.num{font-variant-numeric:tabular-nums}
+
+.page{max-width:1120px;margin:0 auto;padding:22px 14px 64px;display:flex;flex-direction:column;gap:18px}
+.masthead h1{
+  margin:0 0 6px; font-size:clamp(24px,6vw,34px); font-weight:800;
+  letter-spacing:-.025em; text-wrap:balance;
+}
+.masthead p{margin:0;color:var(--ink-2);font-size:14.5px;max-width:62ch}
+.masthead b{color:var(--ink);font-weight:700}
+
+/* The three things to try. Numbered because they are a sequence — each one
+   only makes sense after the one before it. */
+.try{display:flex;flex-direction:column;gap:7px;border:1px solid rgba(201,162,39,.32);
+  background:var(--gold-soft);border-radius:12px;padding:11px 13px}
+.try li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);list-style:none}
+.try ol{margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.try .no{flex:0 0 18px;height:18px;border-radius:99px;background:var(--gold);color:#14100a;
+  font:800 11px/18px ui-sans-serif;text-align:center;margin-top:1px}
+.try b{color:var(--gold-lit);font-weight:700}
+
+/* ── The app ────────────────────────────────────────────────────────── */
+.app{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:11px;display:flex;flex-direction:column;gap:11px}
+.plans{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--ink-2)}
+.pill.on{border-color:var(--gold);color:var(--gold-lit);background:var(--gold-soft)}
+.spacer{flex:1}
+
+.tl{border:1px solid var(--line);border-radius:13px;background:var(--ground);overflow:hidden}
+/* Wraps so five mode chips can take their own line on a phone — clipped
+   at the screen edge, DC was a view nobody could reach. */
+.tlbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.tlbar h2{margin:0;font-size:12.5px;font-weight:800;letter-spacing:.01em}
+.tlbar span{font-size:11.5px;color:var(--ink-3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* No horizontal padding on the scroller. Content scrolls THROUGH a padding
+   strip — the sticky name column pins to the content edge, so a 12px band of
+   fixtures showed to the left of the names. The inset lives on the first
+   column and on the grid's own right padding instead, where it scrolls with
+   the thing it is spacing. */
+.scroller{overflow-x:auto;overflow-y:hidden;padding:9px 0 7px;
+  scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;-webkit-overflow-scrolling:touch}
+.rail,.rows{display:grid;gap:3px;min-width:max-content;padding-right:12px}
+.stub{position:sticky;left:0;z-index:3;background:var(--ground);
+  padding-left:12px;padding-right:7px;display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+.stub .nm2{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.stub .nm2>span{overflow:hidden;text-overflow:ellipsis}
+.stub .pos{font:800 8.5px/1 ui-sans-serif;letter-spacing:.07em;color:var(--ink-3);
+  border:1px solid var(--line);border-radius:3px;padding:2px 3px}
+.stub.cap{font:800 9px/1 ui-sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+
+.wk{display:flex;flex-direction:column;justify-content:flex-end;gap:3px;
+  position:relative;border-radius:7px;padding:17px 2px 2px;min-height:var(--tap);
+  transition:background .15s}
+.wk:hover{background:rgba(255,255,255,.045)}
+.wk[aria-pressed="true"]{background:rgba(201,162,39,.13);box-shadow:inset 0 0 0 1px rgba(201,162,39,.45)}
+.wk .val{font:800 11px/1 ui-sans-serif;text-align:center;color:var(--ink-2)}
+.wk[aria-pressed="true"] .val{color:var(--gold-lit)}
+.wk .bar{border-radius:3px 3px 0 0;background:linear-gradient(180deg,rgba(201,162,39,.48),rgba(201,162,39,.14));
+  border:1px solid rgba(201,162,39,.38);border-bottom:0;transition:height .3s cubic-bezier(.4,0,.2,1)}
+.wk.played .bar{background:linear-gradient(180deg,#6f7887,#3e4550);border-color:transparent}
+.wk[aria-pressed="true"] .bar{background:linear-gradient(180deg,var(--gold-lit),var(--gold));border-color:transparent}
+/* Diverging: easy fixtures grow from the left in green, hard from the right
+   in red, and the grey gap between them is the mid-table middle. easy+hard
+   can never exceed fifteen, so the two can meet but not cross. */
+.wk .risk{height:3px;border-radius:2px;background:var(--raised);display:flex;justify-content:space-between}
+.wk .risk i{display:block;height:100%;border-radius:2px}
+.wk .risk .e{background:var(--live)}
+.wk .risk .h{background:var(--alarm)}
+.wk .gw{font:600 10px/1 ui-sans-serif;text-align:center;color:var(--ink-3);padding-bottom:1px}
+.wk[aria-pressed="true"] .gw{color:var(--gold);font-weight:800}
+/* Inside the button, not hanging above it. At top:-2px the transfer and chip
+   badges poked out of the grid row, which put them above the sticky name
+   column instead of behind it — a green sliver floating over "POINTS". */
+.mark{position:absolute;top:1px;left:50%;transform:translateX(-50%);
+  font:800 8.5px/1 ui-sans-serif;padding:2px 4px;border-radius:5px;white-space:nowrap}
+.mark.move{background:rgba(61,220,122,.16);color:var(--live);border:1px solid rgba(61,220,122,.45)}
+.mark.chip{background:rgba(201,162,39,.2);color:var(--gold-lit);border:1px solid rgba(201,162,39,.55)}
+
+.rows{max-height:0;opacity:0;overflow:hidden;
+  transition:max-height .42s cubic-bezier(.4,0,.2,1),opacity .28s ease,margin-top .42s}
+.rows.open{max-height:1200px;opacity:1;margin-top:8px}
+/* overflow:hidden makes THIS element the scope for the sticky name column, so
+   left:0 sticks to a box that never scrolls and the names slide away with the
+   fixtures — measured at x −261 while the bar row's stub held at 39. It has to
+   clip while the rows are sliding open and stop clipping the moment they land. */
+.rows.settled{overflow:visible}
+/* THE GRID IS DARK GLASS. Every cell is near-black with a faint gold edge
+   and the fixture in the difficulty colour — the difficulty moves from the
+   fill to the ink. Filled chips were a wall of colour, and they used up the
+   very device an arrival needed: now the only strong edge in the grid is
+   the green ring on a new signing, and it stands out at any difficulty. */
+.cell{height:17px;border-radius:3px;background:#0b0c0f;
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.28);
+  font:800 8.5px/17px ui-sans-serif;text-align:center;letter-spacing:.02em;color:var(--ink-2)}
+.cell.d1{color:var(--d1)}.cell.d2{color:var(--d2)}
+.cell.d3{color:#9aa6b5}.cell.d4{color:var(--d4)}
+.cell.d5{color:var(--d5)}
+.cell.void{background:repeating-linear-gradient(45deg,#2a2c31,#2a2c31 3px,#1c1e22 3px,#1c1e22 6px);color:var(--ink-3)}
+.cell.settled{opacity:.3}
+.cell.lit{outline:1.5px solid rgba(255,255,255,.75);outline-offset:-1px}
+.moves{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);
+  font:800 11px/1.3 ui-sans-serif;text-align:center;color:var(--ink-3)}
+
+.handle{display:flex;align-items:center;justify-content:center;gap:10px;
+  min-height:var(--tap);border-top:1px solid var(--line);width:100%;
+  font-size:12.5px;font-weight:600;color:var(--ink-2);transition:background .15s,color .15s}
+.handle:hover{background:rgba(255,255,255,.045);color:var(--ink)}
+.handle .grip{width:30px;height:3px;border-radius:2px;background:var(--line-2)}
+
+/* ── Board and panel ───────────────────────────────────────────────── */
+.work{display:grid;gap:11px}
+@media(min-width:900px){.work{grid-template-columns:minmax(0,1fr) 300px;align-items:start}}
+.dimmed{opacity:.4;transition:opacity .3s}
+.figures{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;margin-bottom:9px}
+.fig{border:1px solid var(--line);border-radius:10px;padding:7px 6px;text-align:center;background:var(--surface-2)}
+.fig b{display:block;font:800 17px/1.1 ui-sans-serif;font-variant-numeric:tabular-nums;color:var(--gold-lit)}
+.fig .sub{display:block;margin-top:2px;font:700 9px/1.2 ui-sans-serif;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3)}
+.fig.plain b{color:var(--ink)}
+
+.pitch{background:linear-gradient(180deg,#17603a 0%,#125a30 46%,#0e4a26 100%);
+  border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:11px 6px;
+  display:flex;flex-direction:column;gap:7px}
+.line{display:flex;justify-content:center;gap:4px}
+.card{flex:1 1 0;min-width:0;max-width:96px;border-radius:8px;padding:5px 3px 4px;text-align:center;
+  background:linear-gradient(168deg,#1f2023,#0f1013);border:1.5px solid #55524a}
+.card.elite{border-color:#f6edd6;box-shadow:0 0 14px -4px rgba(201,162,39,.55)}
+.card.gold{border-color:#c9a227}
+.card.silver{border-color:#99a1ab}
+.card.bronze{border-color:#c8965a}
+.card .who{display:block;font:700 10px/1.2 ui-sans-serif;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .club{display:block;font:600 8px/1.3 ui-sans-serif;color:#9ba1a9}
+.card .fix{display:block;margin:3px 0 2px;border-radius:3px;font:800 8px/13px ui-sans-serif}
+.card .rt{display:block;font:800 10.5px/1.1 ui-sans-serif;font-variant-numeric:tabular-nums;color:#d7d3c9}
+.subs{display:flex;justify-content:center;gap:4px;border-top:1px dashed rgba(255,255,255,.2);padding-top:7px}
+.subs .card{max-width:80px;opacity:.9}
+
+.read{margin-top:9px;border:1px solid rgba(61,220,122,.32);background:rgba(61,220,122,.06);
+  border-radius:11px;padding:9px 11px;font-size:13px;color:var(--ink-2);line-height:1.45}
+.read b{color:var(--live);font-weight:700}
+.read.past{border-color:var(--line);background:var(--surface-2)}
+.read.past b{color:var(--ink)}
+
+.panel{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:9px}
+.ptabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.ptab{padding:6px 10px;font-size:11.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.ptab.on{color:var(--gold-lit);border-bottom-color:var(--gold);font-weight:700}
+.mkt{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line);font-size:12px}
+.mkt:last-child{border:0}
+.mkt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkt .nm i{font-style:normal;color:var(--ink-3);font-size:10.5px}
+.mkt .fx{border-radius:3px;font:800 8px/1 ui-sans-serif;padding:3px 4px}
+.mkt .rt{font:800 12px/1 ui-sans-serif;font-variant-numeric:tabular-nums;color:var(--gold-lit);width:22px;text-align:right}
+
+.swipe{font-size:11px;color:var(--ink-3);padding:0 12px 8px;display:flex;align-items:center;gap:6px}
+.footnote{border-left:2px solid var(--line-2);padding-left:12px;font-size:12.5px;
+  line-height:1.65;color:var(--ink-3);max-width:80ch}
+.footnote b{color:var(--ink-2)}
+
+/* Armband marker beside a week number: your best captain that week clears an
+   elite bar. Absent = a thin armband week, which is itself information. */
+.gw .cb{display:inline-block;background:var(--gold);color:#14100a;border-radius:99px;
+  font:800 7.5px/1 ui-sans-serif;padding:1.5px 3px;vertical-align:1px}
+
+.cell{position:relative}
+.cell .cb2{position:absolute;top:-1px;right:-2px;background:var(--gold);color:#14100a;
+  border-radius:99px;font:800 7px/1 ui-sans-serif;padding:1.5px 2.5px;box-shadow:0 0 0 1.5px #0b0c0f}
+.cell.bn{opacity:.38}
+/* Before he is yours: an empty outline. After you sell him: red hatching.
+   Both keep the column so a transfer reads as one row ending and another
+   starting, which is the whole point of drawing it. */
+/* The handover straddles the seam: the leaver's last cell carries a RED
+   right edge, the arrival a GREEN left one, so the two meet at the boundary
+   and the transfer reads as one gesture — out, in. The green edge is the
+   marker that FAILED on the filled chips and works here, because the dark
+   glass gives it nothing to drown in. The gold-alpha ring stays on the
+   remaining sides. */
+.cell.seam{box-shadow:inset 2.5px 0 0 var(--live), inset 0 0 0 1px rgba(201,162,39,.28)}
+.cell.out{box-shadow:inset -2.5px 0 0 var(--alarm), inset 0 0 0 1px rgba(201,162,39,.28)}
+/* A one-week stint leaves the week he arrived in — both edges at once. */
+.cell.seam.out{box-shadow:inset 2.5px 0 0 var(--live), inset -2.5px 0 0 var(--alarm), inset 0 0 0 1px rgba(201,162,39,.28)}
+.band{grid-column:2/-1;position:relative;height:11px;margin:1px 0 0}
+/* The band holds PAIRS now: the leaver in red, right-anchored over his last
+   fixture; the arrival in green, left-anchored over his first. They meet at
+   the seam the same way the cell edges do, so the handover reads name-to-name
+   as well as edge-to-edge. The old grey start-label went — the red one names
+   the early stretch better, from the end you are actually looking at. */
+.band span{position:absolute;top:0;font:700 8.5px/1.2 ui-sans-serif;white-space:nowrap}
+.band span.nw{color:var(--live)}
+.band span.nw::before{content:'\25B8 '}
+.band span.lv{color:var(--alarm)}
+.band span.lv::after{content:' \25C2'}
+
+/* xP heat: five steps of the accent, never the difficulty ramp — points and
+   difficulty are different questions and must not share a colour language. */
+.cell.x0{color:var(--ink-3)}
+.cell.x1{color:var(--ink-2)}
+.cell.x2{color:var(--gold)}
+.cell.x3{color:var(--gold-lit)}
+.cell.x4{color:#fff3c4;text-shadow:0 0 7px rgba(234,209,136,.6)}
+
+.mode{margin-left:auto;display:flex;gap:2px;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:99px;padding:2px}
+.mode[hidden]{display:none}
+.mchip{border-radius:99px;padding:3px 9px;font-size:10.5px;color:var(--ink-3)}
+.mchip.on{background:var(--gold);color:#14100a;font-weight:800}
+.mchip.nmt{border-left:1px solid var(--line);border-radius:0 99px 99px 0;margin-left:2px}
+.mchip.nmt[aria-pressed="true"]{color:var(--live)}
+.rows.nonames .band{display:none}
+.card .arm{display:inline-block;background:var(--gold);color:#14100a;border-radius:99px;
+  font:800 8px/1 ui-sans-serif;padding:2px 3.5px;margin-right:3px;vertical-align:1px}
+
+.alts{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:13px}
+.alts h2{margin:0 0 10px;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.altrow{display:flex;gap:14px;flex-wrap:wrap}
+.altcase{display:flex;flex-direction:column;gap:5px;align-items:center}
+.altcase .lab{font:800 10px/1 ui-sans-serif;color:var(--ink-3)}
+.altcase .demo{display:flex;gap:3px}
+.altcase .cell{width:52px}
+.altnote{margin:11px 0 0;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:80ch}
+.altnote b{color:var(--ink-2)}
+/* the four alternatives, drawn only in the strip */
+.cell.altA{box-shadow:inset 2.5px 0 0 var(--live)}
+.cell.altC{background:#08090b;box-shadow:inset 0 0 0 1.5px var(--live);color:var(--d1)}
+.cell.altD{position:relative}
+.cell.altD::after{content:'';position:absolute;top:0;left:0;border:4px solid transparent;
+  border-top-color:var(--gold);border-left-color:var(--gold)}
+.cell.altE{box-shadow:0 2.5px 0 0 var(--live)}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <h1>The Season Spine</h1>
+    <p>Layout 1, running. The thing a still picture cannot show: <b>the timeline and the plan
+    grid are one object</b>. The bars are the grid&rsquo;s top row, so expanding does not swap
+    views &mdash; it reveals the rows that were always underneath, on columns that never move.</p>
+  </header>
+
+  <div class="try">
+    <ol>
+      <li><span class="no">1</span><span>Tap a gameweek on the bars. <b>The squad below changes to that week</b> &mdash; fixtures, numbers and all.</span></li>
+      <li><span class="no">2</span><span>Tap <b>Pull down for the whole plan</b>. Fifteen rows slide in under the bars.</span></li>
+      <li><span class="no">3</span><span>With the plan open, flip <b>Fixtures &rarr; xP</b> to see every
+      man&rsquo;s projected points per week. The <b>C</b> on a cell is your armband; dim rows are that week&rsquo;s bench. On the bars, a
+      <b>C</b> means your squad holds <b>the game&rsquo;s best projected captain</b> that week.
+      Then flip the plan between <b>Fix &middot; xP &middot; CS &middot; xGI &middot; DC</b> &mdash;
+      clean-sheet odds, attacking involvement and Def Con, per man per week.</span></li>
+    </ol>
+  </div>
+
+  <div class="app">
+    <div class="plans">
+      <span class="pill on">Plan A</span><span class="pill">Plan B</span><span class="pill">+ New</span>
+      <span class="spacer"></span><span class="pill">Share</span>
+    </div>
+
+    <section class="tl">
+      <div class="tlbar"><h2>Your season</h2><span id="tlsub">scored, and projected</span>
+        <span class="mode" id="mode" hidden>
+          <button class="mchip on" data-m="fix">Fix</button>
+          <button class="mchip" data-m="xp">xP</button>
+          <button class="mchip" data-m="cs">CS</button>
+          <button class="mchip" data-m="gi">xGI</button>
+          <button class="mchip" data-m="dc">DC</button>
+          <button class="mchip nmt" id="namesToggle" aria-pressed="true">Names</button>
+        </span></div>
+      <div class="scroller" id="scroller">
+        <div class="rail" id="rail"></div>
+        <div class="rows" id="rows"></div>
+      </div>
+      <div class="swipe" id="swipe"><span id="swipecue">&#8596;&nbsp; swipe &middot;&nbsp;</span>ABC home &middot; abc away &middot; difficulty is the text colour &middot; <span style="color:var(--live)">&#9656; green edge in</span> &middot; <span style="color:var(--alarm)">red edge out</span></div>
+      <button class="handle" id="handle" aria-expanded="false">
+        <span class="grip"></span><span id="handleLabel">Pull down for the whole plan</span><span class="grip"></span>
+      </button>
+    </section>
+
+    <div class="work" id="work">
+      <div>
+        <div class="figures">
+          <div class="fig"><b id="figXp">54.8</b><span class="sub">xP &middot; rating <span id="figRt">83</span></span></div>
+          <div class="fig plain"><b>75</b><span class="sub">squad</span></div>
+          <div class="fig plain"><b id="figFree">1</b><span class="sub">free</span></div>
+        </div>
+        <div class="pitch" id="pitch"></div>
+        <div class="read" id="read"></div>
+      </div>
+      <aside class="panel">
+        <div class="ptabs"><span class="ptab on">Market</span><span class="ptab">Chips</span><span class="ptab">Moves</span></div>
+        <div id="market"></div>
+      </aside>
+    </div>
+  </div>
+
+  <section class="alts">
+    <h2>How the arrival marker got here</h2>
+    <div class="altrow" id="altrow"></div>
+    <p class="altnote">A &mdash; a green edge on filled chips: invisible on easy fixtures.
+    B &mdash; one inverted cell in a filled grid: read well, but begged the question the grid
+    above now answers &mdash; <b>if dark-with-an-edge is the best-reading cell, why is only one
+    cell drawn that way?</b> C &mdash; the whole grid goes dark glass: every cell near-black
+    with a faint gold edge, difficulty in the ink, and the handover straddles the seam: the leaver&rsquo;s last cell takes a <b>red right
+    edge</b>, the arrival the original <b>green left edge</b>, meeting at the boundary &mdash;
+    the marker that drowned on filled chips works here, because the dark glass gives it
+    nothing to drown in.</p>
+  </section>
+  <p class="footnote"><b>Real numbers.</b> The fifteen is a plan built in the live builder, the
+  fixtures and difficulty ratings are this season&rsquo;s, and the projections and hard-fixture
+  counts are what the app produces for that squad. Only the two played weeks are invented, since
+  the season has not started &mdash; they are there to show the past-and-future split the line
+  is built on. One approximation: <b>per-player xP</b> in the xP view is derived here from
+  rating and fixture &mdash; the weekly totals on the bars are the app&rsquo;s real
+  projections, and the live build would read both from the same model.</p>
+  <p class="footnote"><b>Why the table never grows.</b> The rows are your fifteen
+  <b>squad slots</b>, not players. A transfer is one row changing hands: a green edge marks the
+  week, and the names ride in a thin band above the row, each sitting over the stretch it owns
+  &mdash; so any chain is pairs of labels on one band &mdash; the leaver in <b>red over his last
+  fixture</b>, the arrival in <b>green over his first</b>, meeting at the seam like the cell
+  edges do &mdash; and every fixture stays visible. A wildcard is many handovers in one column &mdash; the one above makes
+  <b>eight changes at GW9</b>, so you can judge the size honestly: eight name bands cost about
+  90px, and the <b>Names</b> toggle folds them away when you want the grid back. Fifteen rows
+  in August, fifteen in May.</p>
+  <p class="footnote"><b>The four data views.</b> xP is approximated from rating and fixture, as
+  before. Clean-sheet odds, xGI and Def Con start from each player&rsquo;s <b>real per-week xPts
+  components</b> in the ratings file, then bend with the fixture &mdash; and Def Con bends the
+  other way, because defenders defend more in hard games. Venue is in the letterform everywhere:
+  ABC at home, abc away.</p>
+  <p class="footnote"><b>What the expand would cost to build: nothing new.</b> The bars are the
+  gameweek strip that already exists. The rows are the Fixtures tab, already built, drawn on the
+  strip&rsquo;s columns instead of its own. The moves row is data the strip already computes. One
+  CSS grid, one height animation.</p>
+</div>
+
+<script>
+const DATA = {"gws":[1,2,3,4,5,6,7,8,9,10,11,12],"slots":[{"p":"GKP","seq":[{"n":"Raya","t":"ARS","p":"GKP","pr":6.0,"r":76,"gi":0.0,"cs":0.532,"dc":0.0,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":1}]},{"p":"GKP","seq":[{"n":"Pickford","t":"EVE","p":"GKP","pr":5.5,"r":61,"gi":0.0,"cs":0.259,"dc":0.0,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Kelleher","t":"BRE","p":"GKP","pr":5.0,"r":62,"gi":0.0,"cs":0.258,"dc":0.0,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":9}]},{"p":"DEF","seq":[{"n":"Senesi","t":"TOT","p":"DEF","pr":6.0,"r":81,"gi":0.178,"cs":0.242,"dc":0.684,"f":[{"o":"BRE","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"AVL","v":"H","d":3},{"o":"MUN","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CHE","v":"A","d":4},{"o":"CRY","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"SUN","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Virgil","t":"LIV","p":"DEF","pr":6.5,"r":79,"gi":0.146,"cs":0.289,"dc":0.421,"f":[{"o":"NEW","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BRE","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"H","d":4},{"o":"CRY","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"EVE","v":"A","d":3}],"from":1}]},{"p":"DEF","seq":[{"n":"Tarkowski","t":"EVE","p":"DEF","pr":6.0,"r":78,"gi":0.132,"cs":0.263,"dc":0.579,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Gabriel","t":"ARS","p":"DEF","pr":8.0,"r":88,"gi":0.158,"cs":0.526,"dc":0.289,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":9}]},{"p":"DEF","seq":[{"n":"Thiaw","t":"NEW","p":"DEF","pr":5.0,"r":67,"gi":0.188,"cs":0.182,"dc":0.316,"f":[{"o":"LIV","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"HUL","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"AVL","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"FUL","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"BHA","v":"A","d":3}],"from":1},{"n":"Gu\u00e9hi","t":"MCI","p":"DEF","pr":6.0,"r":78,"gi":0.196,"cs":0.328,"dc":0.289,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":9}]},{"p":"DEF","seq":[{"n":"Kayode","t":"BRE","p":"DEF","pr":4.5,"r":60,"gi":0.116,"cs":0.257,"dc":0.079,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1},{"n":"J.Timber","t":"ARS","p":"DEF","pr":6.5,"r":76,"gi":0.25,"cs":0.476,"dc":0.079,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":9}]},{"p":"MID","seq":[{"n":"Enzo","t":"CHE","p":"MID","pr":7.0,"r":84,"gi":0.567,"cs":0.242,"dc":0.052,"f":[{"o":"FUL","v":"A","d":3},{"o":"BHA","v":"H","d":2},{"o":"ARS","v":"A","d":5},{"o":"HUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"EVE","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3}],"from":1}]},{"p":"MID","seq":[{"n":"Anderson","t":"MCI","p":"MID","pr":6.5,"r":80,"gi":0.205,"cs":0.249,"dc":0.684,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1},{"n":"B.Fernandes","t":"MUN","p":"MID","pr":12.0,"r":99,"gi":0.706,"cs":0.228,"dc":0.132,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"MID","seq":[{"n":"Garner","t":"EVE","p":"MID","pr":6.0,"r":76,"gi":0.213,"cs":0.258,"dc":0.526,"f":[{"o":"CRY","v":"H","d":3},{"o":"BOU","v":"A","d":3},{"o":"MUN","v":"H","d":4},{"o":"TOT","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"HUL","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"ARS","v":"A","d":5},{"o":"NEW","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"LIV","v":"H","d":4}],"from":1},{"n":"Rice","t":"ARS","p":"MID","pr":7.5,"r":80,"gi":0.318,"cs":0.486,"dc":0.368,"f":[{"o":"COV","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"CHE","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BHA","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"HUL","v":"H","d":2},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4}],"from":6}]},{"p":"MID","seq":[{"n":"E.Le F\u00e9e","t":"SUN","p":"MID","pr":6.0,"r":71,"gi":0.341,"cs":0.251,"dc":0.21,"f":[{"o":"IPS","v":"A","d":2},{"o":"FUL","v":"H","d":2},{"o":"BRE","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"MCI","v":"A","d":5},{"o":"BHA","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"LEE","v":"H","d":2},{"o":"COV","v":"A","d":2},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"TOT","v":"H","d":3}],"from":1},{"n":"Gibbs-White","t":"NFO","p":"MID","pr":8.0,"r":77,"gi":0.422,"cs":0.25,"dc":0.026,"f":[{"o":"LEE","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"TOT","v":"H","d":3},{"o":"AVL","v":"A","d":4},{"o":"COV","v":"H","d":2},{"o":"CRY","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"IPS","v":"A","d":2},{"o":"BRE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4}],"from":9}]},{"p":"MID","seq":[{"n":"Wharton","t":"CRY","p":"MID","pr":5.5,"r":60,"gi":0.322,"cs":0.231,"dc":0.237,"f":[{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"IPS","v":"H","d":2},{"o":"LEE","v":"A","d":3},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"TOT","v":"A","d":3},{"o":"LIV","v":"H","d":4},{"o":"COV","v":"A","d":2},{"o":"HUL","v":"H","d":2}],"from":1},{"n":"Mbeumo","t":"MUN","p":"MID","pr":8.0,"r":83,"gi":0.65,"cs":0.251,"dc":0.0,"f":[{"o":"HUL","v":"A","d":2},{"o":"IPS","v":"H","d":2},{"o":"EVE","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"BOU","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"AVL","v":"H","d":3},{"o":"LIV","v":"A","d":4},{"o":"BRE","v":"H","d":3}],"from":9}]},{"p":"FWD","seq":[{"n":"Haaland","t":"MCI","p":"FWD","pr":15.5,"r":99,"gi":0.935,"cs":0.0,"dc":0.0,"f":[{"o":"BOU","v":"H","d":3},{"o":"CRY","v":"A","d":3},{"o":"COV","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"LIV","v":"A","d":4},{"o":"IPS","v":"H","d":2},{"o":"AVL","v":"A","d":4},{"o":"BHA","v":"H","d":2},{"o":"NFO","v":"A","d":3},{"o":"FUL","v":"H","d":2},{"o":"ARS","v":"A","d":5}],"from":1}]},{"p":"FWD","seq":[{"n":"Thiago","t":"BRE","p":"FWD","pr":8.0,"r":87,"gi":0.667,"cs":0.0,"dc":0.026,"f":[{"o":"TOT","v":"H","d":3},{"o":"LEE","v":"A","d":3},{"o":"SUN","v":"H","d":2},{"o":"BOU","v":"A","d":3},{"o":"CHE","v":"H","d":4},{"o":"AVL","v":"A","d":4},{"o":"LIV","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"EVE","v":"H","d":3},{"o":"MUN","v":"A","d":4}],"from":1}]},{"p":"FWD","seq":[{"n":"Calvert-Lewin","t":"LEE","p":"FWD","pr":6.0,"r":73,"gi":0.579,"cs":0.0,"dc":0.0,"f":[{"o":"NFO","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"BHA","v":"A","d":3},{"o":"NEW","v":"H","d":2},{"o":"CRY","v":"H","d":3},{"o":"ARS","v":"A","d":5},{"o":"MUN","v":"H","d":4},{"o":"SUN","v":"A","d":3},{"o":"BOU","v":"A","d":3},{"o":"TOT","v":"H","d":3},{"o":"CHE","v":"A","d":4},{"o":"COV","v":"H","d":2}],"from":1},{"n":"Watkins","t":"AVL","p":"FWD","pr":8.0,"r":77,"gi":0.559,"cs":0.0,"dc":0.0,"f":[{"o":"BHA","v":"A","d":3},{"o":"ARS","v":"H","d":4},{"o":"HUL","v":"A","d":2},{"o":"NFO","v":"H","d":3},{"o":"TOT","v":"A","d":3},{"o":"BRE","v":"H","d":3},{"o":"NEW","v":"A","d":3},{"o":"MCI","v":"H","d":4},{"o":"FUL","v":"H","d":2},{"o":"MUN","v":"A","d":4},{"o":"SUN","v":"H","d":2},{"o":"IPS","v":"A","d":2}],"from":9}]}],"xp":[54.8,53.5,55.8,53.3,56.1,51.3,59.2,53.9,55.0,60.4,60.6,59.1],"easy":[2,3,5,4,6,6,3,5,3,4,5,1],"hard":[1,2,5,3,3,7,5,5,8,2,3,9],"rating":[83,80,84,79,85,74,86,76,79,81,82,71],"best":[{"n":"B.Fernandes","x":9.7},{"n":"B.Fernandes","x":9.7},{"n":"Haaland","x":9.7},{"n":"Haaland","x":7.5},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8},{"n":"Haaland","x":9.7},{"n":"Haaland","x":8.8},{"n":"Haaland","x":9.7},{"n":"B.Fernandes","x":8.8}]};
+const GWS = DATA.gws, SLOTS = DATA.slots;
+/* Two weeks behind us so the past/future split is visible. Invented — the
+   season starts on 21 August. */
+const SCORED = { 1: 61, 2: 48 };
+const EVENTS = {
+  6: { kind: 'move', text: '1 in', long: 'Garner out, Rice in' },
+  9: { kind: 'chip', text: 'WC', long: 'Wildcard — eight changes: Kelleher, Gabriel, Guéhi, J.Timber, B.Fernandes, Mbeumo, Gibbs-White, Watkins' },
+};
+const FDR = { 1: '#2fbf6e', 2: '#7fd39b', 3: '#4c5766', 4: '#e8907f', 5: '#e05b52' };
+const INK_ON = { 1: '#08120b', 2: '#08120b', 3: '#e6eaef', 4: '#160a08', 5: '#fff' };
+/* CAPS at home, lower case away — the venue in the letterform, since the
+   cell has no room for a (H). */
+const oppText = (f) => (f.v === 'H' ? f.o.toUpperCase() : f.o.toLowerCase());
+
+let selected = 6, open = false, litColumn = null, gridMode = 'fix';
+
+const rail = document.getElementById('rail');
+const rows = document.getElementById('rows');
+const columns = () => 'minmax(112px,112px) repeat(' + GWS.length + ', minmax(46px,1fr))';
+
+const scoredVals = Object.values(SCORED);
+const peak = Math.max(...DATA.xp, ...scoredVals);
+const floorV = Math.min(...DATA.xp, ...scoredVals) - 9;
+const barHeight = (v) => Math.max(10, Math.round(((v - floorV) / (peak - floorV)) * 58));
+
+/* THE ROW IS A SLOT, NOT A PLAYER — fifteen rows in August, fifteen in May. */
+const memberAt = (slot, i) => {
+  const gw = GWS[i];
+  let m = slot.seq[0];
+  for (const q of slot.seq) if (q.from <= gw) m = q;
+  return m;
+};
+
+/* Weekly values. xP is approximated from rating and fixture; CS, xGI and
+   Def Con start from each player's REAL per-week xPts components in the
+   ratings file and are modulated by the fixture. Def Con runs the other
+   way: defenders defend more in hard games. */
+const MULT = { 1: 1.25, 2: 1.1, 3: 1, 4: 0.85, 5: 0.7 };
+const CS_MULT = { 1: 1.35, 2: 1.15, 3: 1, 4: 0.7, 5: 0.5 };
+const DC_MULT = { 1: 0.9, 2: 0.95, 3: 1, 4: 1.1, 5: 1.15 };
+const xpOf = (m, i) => { const f = m.f[i]; return f ? Math.round((Math.pow(m.r / 100, 2) * 8 + 1) * MULT[f.d] * 10) / 10 : 0; };
+const MODES = {
+  xp: { val: xpOf, fmt: (v) => v.toFixed(1), cuts: [7.4, 6, 4.5, 3] },
+  cs: { val: (m, i) => { const f = m.f[i]; return f ? Math.min(0.9, m.cs * CS_MULT[f.d]) * 100 : 0; },
+        fmt: (v) => Math.round(v) + '%', cuts: [40, 30, 20, 10] },
+  gi: { val: (m, i) => { const f = m.f[i]; return f ? m.gi * MULT[f.d] : 0; },
+        fmt: (v) => v.toFixed(1), cuts: [0.7, 0.5, 0.35, 0.2] },
+  dc: { val: (m, i) => { const f = m.f[i]; return f ? Math.min(0.9, m.dc * DC_MULT[f.d]) * 100 : 0; },
+        fmt: (v) => Math.round(v) + '%', cuts: [40, 30, 20, 10] },
+};
+const bucket = (v, cuts) => v >= cuts[0] ? 'x4' : v >= cuts[1] ? 'x3' : v >= cuts[2] ? 'x2' : v >= cuts[3] ? 'x1' : 'x0';
+
+function xiAt(i) {
+  const act = SLOTS.map((s) => memberAt(s, i));
+  const pos = (q, n) => act.filter((m) => m.p === q).sort((a, b) => b.r - a.r).slice(0, n);
+  return pos('GKP', 1).concat(pos('DEF', 3), pos('MID', 4), pos('FWD', 3));
+}
+const XIS = GWS.map((_, i) => xiAt(i));
+const CAPS = XIS.map((xi, i) => xi.reduce((a, b) => (xpOf(b, i) > xpOf(a, i) ? b : a), xi[0]));
+
+function drawRail() {
+  rail.style.gridTemplateColumns = columns();
+  let html = '<div class="stub cap">' + (open ? 'Points' : '') + '</div>';
+  GWS.forEach((gw, i) => {
+    const played = SCORED[gw] != null;
+    const value = played ? SCORED[gw] : DATA.xp[i];
+    const ev = EVENTS[gw];
+    const cap = CAPS[i], capX = xpOf(cap, i);
+    const ownBest = capX >= DATA.best[i].x - 0.05;
+    html += '<button class="wk' + (played ? ' played' : '') + '" data-gw="' + gw + '" data-i="' + i + '"' +
+      ' aria-pressed="' + (gw === selected) + '"' +
+      ' aria-label="Gameweek ' + gw + ', ' + (played ? 'scored ' + value : 'projected ' + value.toFixed(1)) +
+      ', ' + DATA.easy[i] + ' easy and ' + DATA.hard[i] + ' hard fixtures">' +
+      (ev ? '<span class="mark ' + (ev.kind === 'chip' ? 'chip' : 'move') + '" title="' + ev.long + '">' + ev.text + '</span>' : '') +
+      '<span class="val num">' + (played ? value : value.toFixed(1)) + '</span>' +
+      '<span class="bar" style="height:' + barHeight(value) + 'px"></span>' +
+      '<span class="risk" title="' + DATA.easy[i] + ' easy (green, from the left) · ' + DATA.hard[i] + ' hard or blank (red, from the right)">' +
+        '<i class="e" style="width:' + Math.round((DATA.easy[i] / 15) * 100) + '%"></i>' +
+        '<i class="h" style="width:' + Math.round((DATA.hard[i] / 15) * 100) + '%"></i></span>' +
+      '<span class="gw">' + gw +
+      (ownBest ? ' <b class="cb" title="' + cap.n + ' is the game’s best projected captain this week (' + capX.toFixed(1) + ')">C</b>' : '') +
+      '</span></button>';
+  });
+  rail.innerHTML = html;
+  rail.querySelectorAll('.wk').forEach((el) => {
+    el.addEventListener('click', () => { selected = +el.dataset.gw; render(); });
+    el.addEventListener('mouseenter', () => { litColumn = +el.dataset.i; paint(); });
+    el.addEventListener('mouseleave', () => { litColumn = null; paint(); });
+  });
+}
+
+function drawRows() {
+  rows.style.gridTemplateColumns = columns();
+  const selIdx = GWS.indexOf(selected);
+  let html = '';
+  SLOTS.forEach((slot) => {
+    const now = memberAt(slot, selIdx);
+    /* The name band: one label per owner, sitting over the weeks he holds.
+       Left position is the segment's start column as a share of the window.
+       Any chain length is just more labels on the same 11px band. */
+    if (slot.seq.length > 1) {
+      html += '<div class="stub"></div><div class="band">' + slot.seq.map((m, k) => {
+        let out = '';
+        if (k > 0) {
+          const startIdx = Math.max(0, GWS.indexOf(Math.max(m.from, GWS[0])));
+          out += '<span class="nw" style="left:' + (startIdx / GWS.length * 100).toFixed(1) + '%"' +
+            ' title="' + m.n + ' arrives in GW' + m.from + '">' + m.n + '</span>';
+        }
+        if (k < slot.seq.length - 1) {
+          const endIdx = GWS.indexOf(slot.seq[k + 1].from) - 1;
+          if (endIdx >= 0) {
+            out += '<span class="lv" style="right:' + ((GWS.length - endIdx - 1) / GWS.length * 100).toFixed(1) + '%"' +
+              ' title="' + m.n + '\u2019s last game is GW' + GWS[endIdx] + ' — sold in GW' + slot.seq[k + 1].from + '">' + m.n + '</span>';
+          }
+        }
+        return out;
+      }).join('') + '</div>';
+    }
+    html += '<div class="stub"><span class="pos">' + slot.p + '</span><span class="nm2"><span>' + now.n + '</span></span></div>';
+    GWS.forEach((gw, i) => {
+      const m = memberAt(slot, i);
+      const seam = i > 0 && memberAt(slot, i - 1) !== m;
+      const next = i < GWS.length - 1 ? memberAt(slot, i + 1) : m;
+      const leaving = next !== m;
+      const f = m.f[i];
+      const settled = SCORED[gw] != null ? ' settled' : '';
+      const bench = XIS[i].indexOf(m) === -1 ? ' bn' : '';
+      const sm = (seam ? ' seam' : '') + (leaving ? ' out' : '');
+      const capBadge = CAPS[i] === m ? '<b class="cb2" title="Captain this week">C</b>' : '';
+      const arrive = (seam ? m.n + ' arrives. ' : '') + (leaving ? m.n + '\u2019s last week — ' + next.n + ' takes the slot. ' : '');
+      if (!f) { html += '<span class="cell void' + settled + bench + sm + '" data-c="' + i + '" title="' + arrive + 'GW' + gw + ' — blank">&mdash;</span>'; return; }
+      const where = f.v === 'H' ? ' at home' : ' away';
+      if (gridMode === 'fix') {
+        html += '<span class="cell d' + f.d + settled + bench + sm + '" data-c="' + i + '" title="' + arrive +
+          'GW' + gw + ' — ' + f.o + where + ', difficulty ' + f.d + '">' + oppText(f) + capBadge + '</span>';
+      } else {
+        const M = MODES[gridMode];
+        const v = M.val(m, i);
+        html += '<span class="cell ' + bucket(v, M.cuts) + settled + bench + sm + '" data-c="' + i + '" title="' + arrive +
+          'GW' + gw + ' — ' + m.n + ' vs ' + f.o + where + ': ' + M.fmt(v) + '">' + M.fmt(v) + capBadge + '</span>';
+      }
+    });
+  });
+  html += '<div class="stub cap moves">Your moves</div>';
+  GWS.forEach((gw) => {
+    const ev = EVENTS[gw];
+    const colour = ev ? (ev.kind === 'chip' ? 'var(--gold-lit)' : 'var(--live)') : 'var(--ink-3)';
+    html += '<div class="moves" style="color:' + colour + '"' + (ev ? ' title="' + ev.long + '"' : '') + '>' + (ev ? ev.text : '&middot;') + '</div>';
+  });
+  rows.innerHTML = html;
+  rows.querySelectorAll('.cell').forEach((el) => {
+    el.addEventListener('mouseenter', () => { litColumn = +el.dataset.c; paint(); });
+    el.addEventListener('mouseleave', () => { litColumn = null; paint(); });
+  });
+}
+
+function paint() {
+  rows.querySelectorAll('.cell').forEach((el) => el.classList.toggle('lit', +el.dataset.c === litColumn));
+}
+
+const tierOf = (r) => r >= 90 ? 'elite' : r >= 80 ? 'gold' : r >= 70 ? 'silver' : r >= 60 ? 'bronze' : '';
+
+function drawBoard() {
+  const i = GWS.indexOf(selected);
+  const xi = XIS[i];
+  const act = SLOTS.map((s) => memberAt(s, i));
+  const bench = act.filter((m) => xi.indexOf(m) === -1);
+  const cap = CAPS[i], capX = xpOf(cap, i);
+  const card = (m) => {
+    const f = m.f[i];
+    const bg = f ? FDR[f.d] : '#2a2c31';
+    const fg = f ? INK_ON[f.d] : '#8a8d93';
+    return '<div class="card ' + tierOf(m.r) + '"><span class="who">' +
+      (m === cap ? '<span class="arm">C</span>' : '') + m.n + '</span>' +
+      '<span class="club">' + m.t + '</span>' +
+      '<span class="fix" style="background:' + bg + ';color:' + fg + '">' +
+      (f ? f.o + ' (' + f.v + ')' : 'BLANK') + '</span>' +
+      '<span class="rt num">' + m.r + '</span></div>';
+  };
+  document.getElementById('pitch').innerHTML =
+    '<div class="line">' + xi.slice(0, 1).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(1, 4).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(4, 8).map(card).join('') + '</div>' +
+    '<div class="line">' + xi.slice(8, 11).map(card).join('') + '</div>' +
+    '<div class="subs">' + bench.map(card).join('') + '</div>';
+
+  const played = SCORED[selected] != null;
+  document.getElementById('figXp').textContent = played ? SCORED[selected] : DATA.xp[i].toFixed(1);
+  document.getElementById('figRt').textContent = DATA.rating[i];
+  document.getElementById('figFree').textContent = EVENTS[selected] ? '0' : '1';
+
+  const hardest = DATA.hard.indexOf(Math.max(...DATA.hard));
+  const word = DATA.rating[i] >= 85 ? 'an elite' : DATA.rating[i] >= 70 ? 'a strong' : 'a below-par';
+  const best = DATA.best[i];
+  const ownBest = capX >= best.x - 0.05;
+  const readEl = document.getElementById('read');
+  readEl.className = 'read' + (played ? ' past' : '');
+  readEl.innerHTML = played
+    ? '<b>Gameweek ' + selected + ' is played.</b> You scored ' + SCORED[selected] +
+      '. The board shows the eleven you sent out.'
+    : '<b>Gameweek ' + selected + ':</b> ' + DATA.hard[i] + ' of your fifteen in a fixture rated 4 or 5' +
+      (hardest === i ? ' &mdash; the most of any week in your plan.' :
+        ', against ' + Math.max(...DATA.hard) + ' in GW' + GWS[hardest] + '.') +
+      ' Projected ' + DATA.xp[i].toFixed(1) + ', ' + word + ' week. Armband: <b>' + cap.n + '</b> at ' + capX.toFixed(1) +
+      (ownBest ? ' &mdash; the game’s best pick this week.'
+        : '. The game’s best is ' + best.n + ' (' + best.x.toFixed(1) + '), who you don’t own.');
+
+  const shortlist = act.slice().sort((a, b) => b.r - a.r).slice(0, 6);
+  document.getElementById('market').innerHTML = shortlist.map((m) => {
+    const f = m.f[i];
+    return '<div class="mkt"><span class="nm">' + m.n + ' <i>' + m.t + ' &middot; &pound;' + m.pr + 'm</i></span>' +
+      '<span class="fx" style="background:' + (f ? FDR[f.d] : '#2a2c31') + ';color:' + (f ? INK_ON[f.d] : '#8a8d93') +
+      '" title="' + (f ? f.o + (f.v === 'H' ? ' at home' : ' away') : 'blank') + '">' +
+      (f ? oppText(f) : '&mdash;') + '</span><span class="rt num">' + m.r + '</span></div>';
+  }).join('');
+}
+
+function render() { drawRail(); drawRows(); drawBoard(); paint(); }
+
+document.getElementById('handle').addEventListener('click', function () {
+  open = !open;
+  rows.classList.toggle('open', open);
+  this.setAttribute('aria-expanded', String(open));
+  document.getElementById('work').classList.toggle('dimmed', open);
+  document.getElementById('handleLabel').textContent = open ? 'Close the plan' : 'Pull down for the whole plan';
+  document.getElementById('tlsub').textContent = open ? 'every man, every week' : 'scored, and projected';
+  document.getElementById('mode').hidden = !open;
+  if (!open) rows.classList.remove('settled');
+  drawRail();
+});
+
+rows.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'max-height' && open) rows.classList.add('settled');
+});
+
+/* :not(.nmt) — the Names toggle wears the same class for its looks, and the
+   first cut let this listener claim it too: gridMode became undefined and
+   the next redraw threw before painting a cell. */
+document.querySelectorAll('.mchip:not(.nmt)').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    gridMode = chip.dataset.m;
+    document.querySelectorAll('.mchip:not(.nmt)').forEach((c) => c.classList.toggle('on', c === chip));
+    drawRows(); paint();
+  });
+});
+
+function revealSelected(behavior) {
+  const el = rail.querySelector('.wk[aria-pressed="true"]');
+  const box = document.getElementById('scroller');
+  if (!el) return;
+  const target = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+  box.scrollTo({ left: Math.max(0, target), behavior: behavior || 'auto' });
+}
+
+/* The swipe cue has done its job the moment you swipe; the venue key stays. */
+document.getElementById('scroller').addEventListener('scroll', function () {
+  if (this.scrollLeft > 12) { const c = document.getElementById('swipecue'); if (c) c.remove(); }
+}, { passive: true });
+
+document.getElementById('namesToggle').addEventListener('click', function () {
+  const on = this.getAttribute('aria-pressed') !== 'true';
+  this.setAttribute('aria-pressed', String(on));
+  rows.classList.toggle('nonames', !on);
+});
+
+/* The comparison strip: the same three cells — an easy home fixture, the
+   arrival, a hard away one — under each candidate marker. The arrival is
+   drawn on a GREEN cell on purpose; that is the case that killed option A. */
+(function altStrip() {
+  const el = document.getElementById('altrow');
+  if (!el) return;
+  const filled = (d, txt, extra) => '<span class="cell" style="background:' +
+    ({1:'#2fbf6e',2:'#7fd39b',4:'#e8907f'})[d] + ';box-shadow:none;color:rgba(0,0,0,.75);' + (extra || '') + '">' + txt + '</span>';
+  el.innerHTML = [
+    ['A · filled chips, green edge', filled(2, 'SUN') + filled(1, 'BUR', 'box-shadow:inset 2.5px 0 0 #3ddc7a;') + filled(4, 'liv')],
+    ['B · one inverted cell', filled(2, 'SUN') + '<span class="cell" style="box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--d1)">BUR</span>' + filled(4, 'liv')],
+    ['C · dark glass, out/in edges ✓', '<span class="cell d2 out">SUN</span><span class="cell d1 seam">BUR</span><span class="cell d4">liv</span>'],
+  ].map(([lab, demo]) => '<div class="altcase"><span class="lab">' + lab + '</span><span class="demo">' + demo + '</span></div>').join('');
+})();
+
+render();
+revealSelected();
+</script>
